@@ -13,7 +13,7 @@
 | Этап 2 — MCP сервер | DONE | |
 | Этап 3 — Custom Skill | TODO | |
 | Этап 4 — RAG pipeline | TODO | |
-| Этап 5 — LangGraph workflow | TODO | |
+| Этап 5 — LangGraph workflow | DONE | |
 | Этап 6 — Multimodal (Whisper) | TODO | |
 | Этап 7 — Frontend | TODO | |
 | Этап 8 — Evals и A/B тест | TODO | |
