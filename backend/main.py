@@ -19,8 +19,9 @@ app.add_middleware(
 )
 
 # Роуты
-from app.api import health
+from app.api import health, interview
 app.include_router(health.router)
+app.include_router(interview.router)         
 
 
 if __name__ == "__main__":
