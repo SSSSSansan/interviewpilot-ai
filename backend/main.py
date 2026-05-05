@@ -19,10 +19,10 @@ app.add_middleware(
 )
 
 # Роуты
-from app.api import health, interview
+from app.api import health, interview, routes_transcribe
 app.include_router(health.router)
 app.include_router(interview.router)         
-
+app.include_router(routes_transcribe.router)
 
 if __name__ == "__main__":
     import uvicorn

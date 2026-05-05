@@ -11,8 +11,8 @@
 |---|---|---|
 | Этап 1 — Фундамент и инфраструктура | DONE | |
 | Этап 2 — MCP сервер | DONE | |
-| Этап 3 — Custom Skill | TODO | |
-| Этап 4 — RAG pipeline | TODO | |
+| Этап 3 — Custom Skill | DONE | |
+| Этап 4 — RAG pipeline | DONE | |
 | Этап 5 — LangGraph workflow | DONE | |
 | Этап 6 — Multimodal (Whisper) | TODO | |
 | Этап 7 — Frontend | TODO | |
