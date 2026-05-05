@@ -12,11 +12,14 @@ import fitz
 from openai import OpenAI
 from dotenv import load_dotenv
 
+# ▼▼▼ ДОБАВИТЬ: импорт RAG сервиса ▼▼▼
+from backend.app.services.rag_service import retrieve_context
+# ▲▲▲ конец добавления ▲▲▲
+
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# DEV_MODE=true — дешевле, меньше токенов, для тестов
 DEV_MODE = os.getenv("DEV_MODE", "true").lower() == "true"
 FAST_MODEL = "gpt-4o-mini"
 SMART_MODEL = "gpt-4o-mini" if DEV_MODE else "gpt-4.1"
@@ -24,7 +27,6 @@ SMART_MODEL = "gpt-4o-mini" if DEV_MODE else "gpt-4.1"
 server = Server("interviewpilot")
 
 
-# ─── TOOL 1: parse_resume ───────────────────────────────────────────────────
 @server.list_tools()
 async def list_tools() -> list[Tool]:
     return [
@@ -66,7 +68,7 @@ async def list_tools() -> list[Tool]:
         ),
     ]
 
-# ─── TOOL HANDLERS ──────────────────────────────────────────────────────────
+
 @server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     if name == "parse_resume":
@@ -87,7 +89,6 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 
     return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False))]
 
-# ─── IMPLEMENTATIONS ────────────────────────────────────────────────────────
 
 async def _parse_resume(pdf_path: str) -> dict:
     try:
@@ -99,7 +100,6 @@ async def _parse_resume(pdf_path: str) -> dict:
     except Exception as e:
         return {"error": f"Не удалось открыть PDF: {str(e)}"}
 
-    # в DEV режиме берём меньше текста → меньше токенов
     max_chars = 1500 if DEV_MODE else 3500
 
     prompt = f"""Извлеки данные из резюме. Верни ТОЛЬКО JSON, без markdown.
@@ -132,11 +132,20 @@ async def _parse_resume(pdf_path: str) -> dict:
 
 
 async def _generate_questions(role: str, cv_context: dict, rag_context: str = "") -> list[str]:
-    # в DEV режиме генерируем 3 вопроса вместо 5
     n_questions = 3 if DEV_MODE else 5
     cv_summary = json.dumps(cv_context, ensure_ascii=False)[:800]
 
-    rag_section = f"\nКонтекст:\n{rag_context[:300]}" if rag_context else ""
+    # ▼▼▼ ИЗМЕНИТЬ: если rag_context не передан — достаём сами ▼▼▼
+    if not rag_context:
+        skills_query = ", ".join(cv_context.get("skills", [])[:5])
+        rag_context = retrieve_context(
+            query=f"вопросы для {role}, навыки: {skills_query}",
+            role=role,
+            top_k=3
+        )
+    # ▲▲▲ конец изменения ▲▲▲
+
+    rag_section = f"\nКонтекст из базы знаний:\n{rag_context[:500]}" if rag_context else ""
 
     prompt = f"""Ты технический интервьюер. Сгенерируй {n_questions} вопроса.
 
@@ -199,9 +208,7 @@ is_weak = true если total_score < 6.
     try:
         raw = r.choices[0].message.content.strip().replace("```json", "").replace("```", "")
         result = json.loads(raw)
-        # жёстко пересчитываем — не доверяем модели
         scores = result["scores"]
-        # клампим каждый скор до 0-2
         for k in scores:
             scores[k] = max(0, min(2, int(scores[k])))
         result["total_score"] = sum(scores.values())
@@ -210,7 +217,7 @@ is_weak = true если total_score < 6.
     except json.JSONDecodeError:
         return {"raw": r.choices[0].message.content, "parse_error": True}
 
-# ─── ENTRY POINT ────────────────────────────────────────────────────────────
+
 async def main():
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, server.create_initialization_options())

@@ -1,0 +1,31 @@
+ROLE: Frontend Engineer
+
+Q: Что такое Virtual DOM и зачем он нужен?
+A (strong): Virtual DOM — легковесная копия реального DOM в памяти. React при изменении state создаёт новый Virtual DOM, сравнивает с предыдущим (reconciliation/diffing), и применяет только минимальный набор изменений к реальному DOM. Это быстрее прямой работы с DOM потому что операции с реальным DOM дорогие (reflow, repaint). Альтернатива Svelte: компилирует компоненты в прямой DOM код без Virtual DOM оверхеда.
+A (weak): Virtual DOM это быстрый DOM который React использует.
+Red flags: не может объяснить процесс reconciliation, думает что Virtual DOM всегда быстрее.
+
+Q: Объясни разницу между var, let, const в JavaScript.
+A (strong): var — function scope, hoisting (объявление поднимается вверх), можно переобъявить. let — block scope, нет hoisting проблем, можно переприсвоить. const — block scope, нельзя переприсвоить (но объект/массив можно мутировать). Современный код: только let и const. var оставлен для обратной совместимости.
+A (weak): const нельзя менять, let можно, var устаревший.
+Red flags: не знает что такое hoisting, путает scope.
+
+Q: Что такое CSS specificity и как она работает?
+A (strong): Specificity — приоритет CSS правил при конфликте. Считается как (inline, id, class, tag): inline=1000, #id=100, .class/:pseudo=10, tag=1. Правило с большей специфичностью побеждает. !important перебивает всё (использовать осторожно). Одинаковая специфичность — побеждает правило написанное позже.
+A (weak): Более конкретные селекторы имеют приоритет.
+Red flags: не знает числовую систему, не может объяснить почему стиль не применяется.
+
+Q: Как работает event loop в JavaScript?
+A (strong): JS — однопоточный язык. Event loop координирует выполнение: Call Stack (синхронный код), Web APIs (setTimeout, fetch — браузер обрабатывает async), Callback Queue (макро-таски: setTimeout, события), Microtask Queue (Promise.then, async/await — приоритет выше). Event loop проверяет: если Call Stack пуст — берёт из Microtask Queue (сначала), потом из Callback Queue.
+A (weak): Event loop позволяет делать асинхронный код в JavaScript.
+Red flags: не знает разницу microtask и macrotask, не понимает почему Promise быстрее setTimeout.
+
+Q: Что такое CORS и как его настроить?
+A (strong): CORS (Cross-Origin Resource Sharing) — механизм безопасности браузера, блокирующий запросы к другому origin (домен+порт+протокол). Сервер разрешает через заголовки: Access-Control-Allow-Origin, Access-Control-Allow-Methods. Preflight запрос (OPTIONS) — браузер спрашивает разрешение перед сложным запросом. Настройка на бэкенде: добавить нужные заголовки или использовать middleware (например fastapi.middleware.cors).
+A (weak): CORS это ошибка когда фронт не может достучаться до бэка.
+Red flags: думает что CORS настраивается на фронтенде, не знает preflight.
+
+Q: Объясни разницу между SSR, CSR и SSG.
+A (strong): CSR (Client-Side Rendering) — браузер получает пустой HTML + JS, рендерит на клиенте. Плюс: быстрые переходы, минус: медленный первый рендер, плохо для SEO. SSR (Server-Side Rendering) — сервер рендерит HTML на каждый запрос, отдаёт готовый. Плюс: SEO, быстрый первый рендер. Минус: нагрузка на сервер. SSG (Static Site Generation) — HTML генерируется на этапе билда. Плюс: максимальная скорость, минус: данные статичны. Next.js поддерживает все три.
+A (weak): SSR это когда рендеринг на сервере.
+Red flags: не знает зачем выбирать между ними, не понимает SEO implications.
