@@ -32,7 +32,8 @@ async def resume_parser(state: InterviewState) -> dict:
                 "years_experience": 2,
                 "projects": ["E-commerce API на FastAPI", "Телеграм бот"],
                 "languages": ["Python", "SQL"],
-                "role_relevance": {"Backend": 8, "Frontend": 3, "ML": 4, "Data Analyst": 5, "PM": 2}
+                # ФИX БАГ 1: убрали перекос в сторону Backend
+                "role_relevance": {"Backend": 5, "Frontend": 5, "ML": 5, "Data Analyst": 5, "PM": 5}
             }
         }
 
@@ -74,12 +75,8 @@ async def role_analyzer(state: InterviewState) -> dict:
     cv_data = state.get("cv_data", {})
     role = state.get("role", "Backend")
 
-    role_relevance = cv_data.get("role_relevance", {})
-    if role_relevance:
-        best_role = max(role_relevance, key=role_relevance.get)
-        if role_relevance.get(role, 0) < role_relevance.get(best_role, 0) - 3:
-            role = best_role
-
+    # ФИX БАГ 1: убрали логику перезаписи роли — уважаем выбор пользователя
+    # role_analyzer теперь просто подтверждает роль без подмены
     return {"role": role, "cv_data": cv_data}
 
 
@@ -88,7 +85,6 @@ async def question_generator(state: InterviewState) -> dict:
     existing_questions = state.get("questions", [])
     current_index = state.get("current_question_index", 0)
 
-    # вопросы уже есть — просто обновляем текущий вопрос
     if existing_questions:
         return {
             "questions": existing_questions,
@@ -101,15 +97,22 @@ async def question_generator(state: InterviewState) -> dict:
     n_questions = 3 if DEV_MODE else 5
     cv_summary = json.dumps(cv_data, ensure_ascii=False)[:600]
 
-    prompt = f"""Ты технический интервьюер. Сгенерируй {n_questions} вопроса для роли {role}.
+    # ФИX БАГ 1: роль явно передаётся в промпт и подчёркивается
+    prompt = f"""Ты технический интервьюер. Сгенерируй ровно {n_questions} вопроса ТОЛЬКО для роли: {role}.
+
+ВАЖНО: вопросы должны быть строго по специализации "{role}". 
+Не задавай вопросы по другим ролям.
 
 CV кандидата: {cv_summary}
 
-Требования:
-- 2 технических вопроса по стеку
-- 1 вопрос про конкретный проект из CV
+Примеры тем для роли {role}:
+- Если ML Engineer: ML алгоритмы, обучение моделей, метрики, фреймворки (PyTorch/TensorFlow/sklearn)
+- Если Frontend Engineer: React/Vue, CSS, браузерные API, производительность
+- Если Backend Engineer: API, БД, архитектура сервисов, кэширование
+- Если Data Analyst: SQL, статистика, визуализация, A/B тесты
+- Если Product Manager: приоритизация, метрики, работа с командой
 
-Верни ТОЛЬКО JSON массив без markdown:
+Верни ТОЛЬКО JSON массив без markdown, ровно {n_questions} элемента:
 ["вопрос 1", "вопрос 2", "вопрос 3"]"""
 
     response = await fast_llm.ainvoke(prompt)
@@ -118,9 +121,9 @@ CV кандидата: {cv_summary}
         questions = json.loads(raw)
     except json.JSONDecodeError:
         questions = [
-            "Расскажи о своём опыте с FastAPI?",
-            "Как ты работаешь с базами данных в Python?",
-            "Расскажи о самом сложном проекте?",
+            f"Расскажи о своём опыте в области {role}?",
+            f"Какие инструменты ты используешь как {role}?",
+            f"Опиши самый сложный проект в роли {role}?",
         ]
 
     return {
@@ -178,8 +181,8 @@ is_weak = true если сумма < 6.
         }
 
     return {
-        "current_score": result,
-        "all_scores": [result],
+    "current_score": result,
+    "all_scores": [result],
     }
 
 
@@ -224,7 +227,7 @@ async def next_question(state: InterviewState) -> dict:
         "current_question_index": next_index,
         "current_question": questions[next_index],
         "current_answer": "",
-        "follow_up_count": 0,
+        "follow_up_count": 0,  # ФИX БАГ 3: сбрасываем счётчик follow_up для нового вопроса
         "is_complete": False,
     }
 
