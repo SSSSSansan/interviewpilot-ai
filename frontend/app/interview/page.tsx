@@ -15,6 +15,8 @@ export default function InterviewPage() {
   const [loading, setLoading] = useState(false);
   const [lastScore, setLastScore] = useState<any>(null);
   const [role, setRole] = useState("");
+  const [idealAnswer, setIdealAnswer] = useState("");
+  const [showIdealAnswer, setShowIdealAnswer] = useState(false);
 
   useEffect(() => {
     setThreadId(sessionStorage.getItem("thread_id") || "");
@@ -27,6 +29,8 @@ export default function InterviewPage() {
   async function handleSubmit() {
     if (!answer.trim()) return;
     setLoading(true);
+    setIdealAnswer("");
+    setShowIdealAnswer(false);
     try {
       const data = await submitAnswer(threadId, answer);
       if (data.is_complete) {
@@ -37,6 +41,7 @@ export default function InterviewPage() {
       }
 
       if (data.last_score) setLastScore(data.last_score);
+      if (data.ideal_answer) setIdealAnswer(data.ideal_answer);
 
       const newNum = data.question_number;
       const prevNum = questionNumber;
@@ -73,7 +78,9 @@ export default function InterviewPage() {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-[#A1A1AA]">
-            {isFollowUp ? `Вопрос ${questionNumber} из ${totalQuestions} · уточнение` : `Вопрос ${questionNumber} из ${totalQuestions}`}
+            {isFollowUp
+              ? `Вопрос ${questionNumber} из ${totalQuestions} · уточнение`
+              : `Вопрос ${questionNumber} из ${totalQuestions}`}
           </span>
           <div className="w-24 h-1 bg-[#E4E4E7] rounded-full overflow-hidden">
             <div
@@ -87,18 +94,45 @@ export default function InterviewPage() {
       {/* Content */}
       <div className="max-w-2xl mx-auto px-6 py-10 flex flex-col gap-5">
 
-        {/* Feedback from previous answer */}
+        {/* Feedback от предыдущего ответа */}
         {lastScore && (
           <div className={`rounded-xl border px-4 py-3 ${scoreColor(lastScore.total_score)}`}>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-semibold uppercase tracking-wider">Фидбек на предыдущий ответ</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">
+                Фидбек на предыдущий ответ
+              </span>
               <span className="text-sm font-semibold">{lastScore.total_score}/10</span>
             </div>
             <p className="text-sm leading-relaxed opacity-90">{lastScore.feedback}</p>
           </div>
         )}
 
-        {/* Question */}
+        {/* Эталонный ответ — показывается после фидбека */}
+        {idealAnswer && (
+          <div className="rounded-xl border border-emerald-200 overflow-hidden">
+            <button
+              onClick={() => setShowIdealAnswer(!showIdealAnswer)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-emerald-50 hover:bg-emerald-100 transition-colors text-left"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-base">💡</span>
+                <span className="text-sm font-medium text-emerald-800">
+                  Посмотреть эталонный ответ
+                </span>
+              </div>
+              <span className="text-emerald-600 text-sm">
+                {showIdealAnswer ? "▲ Скрыть" : "▼ Показать"}
+              </span>
+            </button>
+            {showIdealAnswer && (
+              <div className="px-4 py-4 bg-white border-t border-emerald-100">
+                <p className="text-sm text-[#18181B] leading-relaxed">{idealAnswer}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Вопрос */}
         <div className="bg-white rounded-xl border border-[#E4E4E7] px-5 py-5">
           {isFollowUp && (
             <span className="inline-block text-[11px] font-medium text-[#A1A1AA] uppercase tracking-widest mb-3 bg-[#F4F4F5] px-2 py-0.5 rounded">
@@ -108,7 +142,7 @@ export default function InterviewPage() {
           <p className="text-[15px] leading-relaxed text-[#18181B] font-normal">{question}</p>
         </div>
 
-        {/* Answer area */}
+        {/* Поле ответа */}
         <div className="bg-white rounded-xl border border-[#E4E4E7] overflow-hidden">
           <textarea
             value={answer}
@@ -121,7 +155,11 @@ export default function InterviewPage() {
             }}
           />
           <div className="px-4 py-3 border-t border-[#E4E4E7] flex items-center justify-between bg-[#FAFAF9]">
-            <VoiceRecorder onTranscribed={(text) => setAnswer((prev) => prev ? prev + " " + text : text)} />
+            <VoiceRecorder
+              onTranscribed={(text) =>
+                setAnswer((prev) => (prev ? prev + " " + text : text))
+              }
+            />
             <div className="flex items-center gap-3">
               <span className="text-[11px] text-[#A1A1AA]">⌘↵ отправить</span>
               <button
@@ -135,7 +173,7 @@ export default function InterviewPage() {
           </div>
         </div>
 
-        {/* Criteria hint */}
+        {/* Критерии */}
         <div className="flex items-center gap-4 px-1">
           {["Точность", "Ясность", "Глубина", "Уверенность", "Коммуникация"].map((c) => (
             <span key={c} className="text-[11px] text-[#A1A1AA]">{c}</span>

@@ -155,10 +155,17 @@ async def submit_answer(req: AnswerRequest):
             "all_scores": state["all_scores"],
         }
 
+    # Берём последнюю оценку для передачи на фронт
+    last_score = state.get("current_score", {})
+
     return {
         "is_complete": False,
         "question": state["current_question"],
         "question_number": state["current_question_index"] + 1,
         "total_questions": len(state["questions"]),
-        "last_score": state.get("current_score", {}),
+        "last_score": last_score,
+        # Новые поля для фронтенда:
+        "feedback": last_score.get("feedback", ""),
+        "ideal_answer": last_score.get("ideal_answer", ""),
+        "total_score": last_score.get("total_score", 0),
     }

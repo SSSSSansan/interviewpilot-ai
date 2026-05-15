@@ -183,50 +183,75 @@ CV кандидата: {cv_summary}
 async def answer_evaluator(state: InterviewState) -> dict:
     question = state.get("current_question", "")
     answer = state.get("current_answer", "")
+    role = state.get("role", "Backend")
+    cv_data = state.get("cv_data", {})
 
-    prompt = f"""Оцени ответ кандидата. Каждый критерий строго 0, 1 или 2 (не больше!).
+    # Краткий контекст CV для персонализации фидбека
+    cv_context = ""
+    if cv_data.get("tech_stack"):
+        cv_context = f"Стек кандидата: {', '.join(cv_data['tech_stack'][:5])}"
+
+    prompt = f"""Ты строгий технический интервьюер. Роль кандидата: {role}.
+{cv_context}
 
 Вопрос: {question}
-Ответ: {answer}
+Ответ кандидата: {answer}
 
-Критерии (только 0, 1 или 2):
-- technical_correctness
-- clarity
-- depth
-- confidence
-- communication
+Оцени ответ по 5 критериям (каждый строго 0, 1 или 2):
+- technical_correctness: технически верно?
+- clarity: понятно изложено?
+- depth: достаточно глубоко?
+- confidence: уверенно?
+- communication: структурированно?
 
 is_weak = true если сумма < 6.
 
-Верни ТОЛЬКО JSON без markdown:
+ideal_answer — напиши пример сильного ответа (3-5 предложений).
+Как ответил бы опытный инженер с 3+ годами опыта.
+Используй правильные термины. Структура: суть → детали → пример.
+
+Верни ТОЛЬКО валидный JSON без markdown:
 {{
   "scores": {{"technical_correctness": 1, "clarity": 1, "depth": 1, "confidence": 1, "communication": 1}},
   "total_score": 5,
-  "reasoning": "объяснение",
-  "feedback": "рекомендации",
+  "reasoning": "краткое объяснение оценки",
+  "feedback": "конкретный фидбек 2-3 предложения — что хорошо и что улучшить",
+  "ideal_answer": "пример сильного ответа 3-5 предложений",
   "is_weak": true
 }}"""
 
     response = await eval_llm.ainvoke(prompt)
+
     try:
         raw = response.content.strip().replace("```json", "").replace("```", "")
         result = json.loads(raw)
+
+        # Защита: каждый критерий строго 0-2
         for k in result["scores"]:
             result["scores"][k] = max(0, min(2, int(result["scores"][k])))
         result["total_score"] = sum(result["scores"].values())
         result["is_weak"] = result["total_score"] < 6
+
+        # Защита: если ideal_answer не пришёл
+        if not result.get("ideal_answer"):
+            result["ideal_answer"] = ""
+
     except json.JSONDecodeError:
         result = {
-            "scores": {"technical_correctness": 1, "clarity": 1, "depth": 1, "confidence": 1, "communication": 1},
+            "scores": {
+                "technical_correctness": 1, "clarity": 1, "depth": 1,
+                "confidence": 1, "communication": 1
+            },
             "total_score": 5,
-            "reasoning": "Ошибка парсинга",
+            "reasoning": "Ошибка парсинга ответа",
             "feedback": "Попробуйте ответить подробнее",
+            "ideal_answer": "",
             "is_weak": True,
         }
 
     return {
-    "current_score": result,
-    "all_scores": [result],
+        "current_score": result,
+        "all_scores": state.get("all_scores", []) + [result],
     }
 
 

@@ -16,7 +16,7 @@
 | Этап 5 — LangGraph workflow | DONE | Граф с ветвлением и циклом |
 | Этап 6 — Multimodal (Whisper) | DONE | POST /transcribe работает |
 | Этап 7 — Frontend | DONE | Next.js страницы задеплоены |
-| Этап 7.5 — PDF парсинг резюме | TODO ⚠️ | Критически важно — без него CV-aware логика не работает |
+| Этап 7.5 — PDF парсинг резюме | DONE| Критически важно — без него CV-aware логика не работает |
 | Этап 7.6 — Фича: Эталонный ответ | TODO | ideal_answer поле в evaluate_answer |
 | Этап 7.7 — Фича: Реакция на "не знаю" | TODO | Новая нода hint_node в LangGraph |
 | Этап 7.8 — Фича: Личность интервьюера | TODO | Выбор стиля в начале + system prompt |

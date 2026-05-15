@@ -1,10 +1,16 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
-export async function startInterview(role: string, pdfPath: string = "") {
+export async function startInterview(role: string, resumeFile?: File) {
+  const formData = new FormData();
+  formData.append("role", role);
+  formData.append("interviewer_style", "friendly");
+  if (resumeFile) {
+    formData.append("resume_pdf", resumeFile);
+  }
+
   const res = await fetch(`${API_BASE}/interview/start`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ role, pdf_path: pdfPath }),
+    body: formData,
   });
   return res.json();
 }
