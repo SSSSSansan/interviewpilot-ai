@@ -4,13 +4,32 @@ from app.graph.state import InterviewState
 from app.graph.nodes import (
     resume_parser, role_analyzer, question_generator,
     answer_evaluator, follow_up, next_question, final_feedback,
+    hint_node,
 )
 
 
-def should_follow_up(state: InterviewState) -> str:
+def route_after_answer(state: InterviewState) -> str:
+    """
+    Conditional edge после answer_evaluator / hint_node.
+    """
+    # Если hint_node выставил awaiting_retry — ждём повторного ответа
+    if state.get("awaiting_retry"):
+        return "wait"  # остаёмся на interrupt
+
     score = state.get("current_score", {})
     follow_up_count = state.get("follow_up_count", 0)
     max_follow_ups = state.get("max_follow_ups", 2)
+
+    if score.get("is_weak") and follow_up_count < max_follow_ups:
+        return "follow_up"
+    return "next_question"
+
+
+def route_after_evaluator(state: InterviewState) -> str:
+    score = state.get("current_score", {})
+    follow_up_count = state.get("follow_up_count", 0)
+    max_follow_ups = state.get("max_follow_ups", 2)
+
     if score.get("is_weak") and follow_up_count < max_follow_ups:
         return "follow_up"
     return "next_question"
@@ -28,21 +47,27 @@ def build_graph():
     graph.add_node("resume_parser", resume_parser)
     graph.add_node("role_analyzer", role_analyzer)
     graph.add_node("question_generator", question_generator)
+    graph.add_node("hint_node", hint_node)
     graph.add_node("answer_evaluator", answer_evaluator)
     graph.add_node("follow_up", follow_up)
     graph.add_node("next_question", next_question)
     graph.add_node("final_feedback", final_feedback)
 
     graph.set_entry_point("resume_parser")
+
     graph.add_edge("resume_parser", "role_analyzer")
     graph.add_edge("role_analyzer", "question_generator")
-    graph.add_edge("question_generator", "answer_evaluator")
+    graph.add_edge("question_generator", "hint_node")  # hint_node решает: hint или evaluate
+
+    # hint_node → answer_evaluator (если не "не знаю") или обратно ждёт (interrupt)
+    graph.add_edge("hint_node", "answer_evaluator")
 
     graph.add_conditional_edges(
         "answer_evaluator",
-        should_follow_up,
+        route_after_evaluator,
         {"follow_up": "follow_up", "next_question": "next_question"}
     )
+
     graph.add_edge("follow_up", "answer_evaluator")
 
     graph.add_conditional_edges(
@@ -50,13 +75,14 @@ def build_graph():
         should_continue,
         {"final_feedback": "final_feedback", "question_generator": "question_generator"}
     )
+
     graph.add_edge("final_feedback", END)
 
     checkpointer = MemorySaver()
-    # interrupt_before answer_evaluator — граф останавливается и ждёт ответа
+
     return graph.compile(
         checkpointer=checkpointer,
-        interrupt_before=["answer_evaluator"],
+        interrupt_before=["hint_node"],
     )
 
 

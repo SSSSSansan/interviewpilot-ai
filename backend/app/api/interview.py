@@ -87,6 +87,8 @@ async def start_interview(
         "final_report": "",
         "is_complete": False,
         "cv_data": {},
+        "hint": "",
+        "awaiting_retry": False,
     }
 
     state = await interview_graph.ainvoke(initial_state, config=config)
@@ -139,10 +141,17 @@ async def submit_answer(req: AnswerRequest):
         "recursion_limit": 50
     }
 
+    # Получаем текущий state чтобы проверить awaiting_retry
+    current_state = await interview_graph.aget_state(config)
+    awaiting_retry = current_state.values.get("awaiting_retry", False)
+    
     # Обновляем ответ в состоянии графа
     await interview_graph.aupdate_state(
         config,
-        {"current_answer": req.answer},
+        {
+            "current_answer": req.answer,
+            "awaiting_retry": awaiting_retry,  # сохраняем флаг — граф сам решит
+        },
     )
 
     # Продолжаем граф с того места где остановились
@@ -157,14 +166,30 @@ async def submit_answer(req: AnswerRequest):
 
     # Берём последнюю оценку для передачи на фронт
     last_score = state.get("current_score", {})
+    hint = state.get("hint", "")
+
+    if hint and state.get("awaiting_retry"):
+        return {
+            "is_complete": False,
+            "type": "hint",
+            "hint": hint,
+            "question": state["current_question"],
+            "question_number": state["current_question_index"] + 1,
+            "total_questions": len(state["questions"]),
+            "last_score": {},
+            "feedback": "",
+            "ideal_answer": "",
+            "total_score": 0,
+        }
 
     return {
         "is_complete": False,
+        "type": "feedback",
+        "hint": "",
         "question": state["current_question"],
         "question_number": state["current_question_index"] + 1,
         "total_questions": len(state["questions"]),
         "last_score": last_score,
-        # Новые поля для фронтенда:
         "feedback": last_score.get("feedback", ""),
         "ideal_answer": last_score.get("ideal_answer", ""),
         "total_score": last_score.get("total_score", 0),

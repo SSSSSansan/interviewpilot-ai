@@ -334,3 +334,61 @@ async def final_feedback(state: InterviewState) -> dict:
 
     response = await smart_llm.ainvoke(prompt)
     return {"final_report": response.content}
+
+def is_dont_know(answer: str) -> bool:
+    dont_know_phrases = [
+        "не знаю", "незнаю", "не знаю как", "затрудняюсь",
+        "skip", "пропустить", "не уверен", "не уверена",
+        "i don't know", "idk", "хз", "понятия не имею",
+        "не могу ответить", "pass", "не знаю ответа",
+    ]
+    cleaned = answer.strip().lower()
+    return cleaned in dont_know_phrases or len(cleaned) < 4
+
+
+@traceable(name="hint_node")
+async def hint_node(state: InterviewState) -> dict:
+    """
+    Проверяет ответ. Если "не знаю" — генерирует hint и выставляет awaiting_retry.
+    Если нормальный ответ — пропускает дальше без изменений.
+    """
+    answer = state.get("current_answer", "")
+    awaiting_retry = state.get("awaiting_retry", False)
+
+    # Если уже показали hint — сбрасываем флаг и идём оценивать
+    if awaiting_retry:
+        return {"awaiting_retry": False, "hint": ""}
+
+    # Если нормальный ответ — просто пропускаем
+    if not is_dont_know(answer):
+        return {"awaiting_retry": False, "hint": ""}
+
+    # Генерируем hint
+    question = state.get("current_question", "")
+    style = state.get("interviewer_style", "friendly")
+
+    style_instructions = {
+        "strict": "Кратко и по делу. Без лишних слов.",
+        "friendly": "Поддержи кандидата, скажи что ничего страшного и дай направление.",
+        "academic": "Направь к теоретическим основам вопроса.",
+    }
+
+    prompt = f"""Ты технический интервьюер. Стиль: {style}. {style_instructions.get(style, '')}
+
+Кандидат не знает ответа на вопрос: "{question}"
+
+Дай подсказку которая:
+- Направляет в правильную сторону, НО не раскрывает ответ
+- Занимает 1-2 предложения максимум
+- Заканчивается вопросом "Попробуешь ответить?"
+
+Верни только текст подсказки, без пояснений и кавычек."""
+
+    response = await fast_llm.ainvoke(prompt)
+    hint_text = response.content.strip()
+
+    return {
+        "hint": hint_text,
+        "awaiting_retry": True,
+        "current_answer": "",
+    }

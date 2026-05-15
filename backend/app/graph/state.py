@@ -7,6 +7,7 @@ class InterviewState(TypedDict):
     cv_data: dict
     role: str
     pdf_path: str
+    interviewer_style: str
 
     # Вопросы
     questions: list[str]
@@ -21,6 +22,10 @@ class InterviewState(TypedDict):
     # Follow-up
     follow_up_count: int
     max_follow_ups: int
+
+    # Hint (реакция на "не знаю")
+    hint: str
+    awaiting_retry: bool
 
     # Финал
     final_report: str
