@@ -14,8 +14,8 @@
 | Этап 3 — Custom Skill | DONE | |
 | Этап 4 — RAG pipeline | DONE | |
 | Этап 5 — LangGraph workflow | DONE | |
-| Этап 6 — Multimodal (Whisper) | TODO | |
-| Этап 7 — Frontend | TODO | |
+| Этап 6 — Multimodal (Whisper) | DONE | |
+| Этап 7 — Frontend | DONE | |
 | Этап 8 — Evals и A/B тест | TODO | |
 | Этап 9 — Документация и LLM обоснование | TODO | |
 | Этап 10 — Финальная проверка и демо | TODO | |

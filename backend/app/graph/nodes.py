@@ -21,22 +21,35 @@ smart_llm = ChatOpenAI(model=SMART_MODEL, temperature=0.3)
 
 @traceable(name="resume_parser")
 async def resume_parser(state: InterviewState) -> dict:
+    """
+    Парсит PDF резюме.
+    Поддерживает русский и английский.
+    Берёт pdf_path из state (файл сохраняется роутом перед запуском графа).
+    """
+    import re
     pdf_path = state.get("pdf_path", "")
 
+    # --- Заглушка если PDF не передан ---
     if not pdf_path or not os.path.exists(pdf_path):
         return {
             "cv_data": {
-                "name": "Test Candidate",
+                "name": "Кандидат",
                 "skills": ["Python", "FastAPI", "PostgreSQL"],
                 "tech_stack": ["Python", "FastAPI", "Docker", "PostgreSQL"],
                 "years_experience": 2,
                 "projects": ["E-commerce API на FastAPI", "Телеграм бот"],
                 "languages": ["Python", "SQL"],
-                # ФИX БАГ 1: убрали перекос в сторону Backend
-                "role_relevance": {"Backend": 5, "Frontend": 5, "ML": 5, "Data Analyst": 5, "PM": 5}
+                "current_role": "",
+                "education": "",
+                "spoken_languages": [],
+                "role_relevance": {
+                    "Backend": 5, "Frontend": 5,
+                    "ML": 5, "Data Analyst": 5, "PM": 5
+                }
             }
         }
 
+    # --- Извлекаем текст через PyMuPDF ---
     try:
         import fitz
         doc = fitz.open(pdf_path)
@@ -45,40 +58,71 @@ async def resume_parser(state: InterviewState) -> dict:
     except Exception as e:
         return {"cv_data": {"error": str(e)}}
 
+    # Определяем язык резюме
+    has_cyrillic = bool(re.search(r'[а-яёА-ЯЁ]', text))
+    language_hint = (
+        "Резюме написано на русском языке."
+        if has_cyrillic
+        else "The resume is in English."
+    )
+
     max_chars = 1500 if DEV_MODE else 3500
-    prompt = f"""Извлеки данные из резюме. Верни ТОЛЬКО JSON без markdown.
+
+    prompt = f"""Ты парсер резюме. {language_hint}
+Извлеки данные из резюме ниже. Верни ТОЛЬКО валидный JSON без markdown и без комментариев.
 
 Резюме:
 {text[:max_chars]}
 
-Формат:
+Формат ответа (все поля обязательны):
 {{
-  "name": "имя",
-  "skills": ["навык"],
-  "tech_stack": ["технология"],
+  "name": "имя кандидата или пустая строка",
+  "current_role": "текущая или последняя должность",
+  "skills": ["фреймворки", "инструменты", "БД и т.д."],
+  "tech_stack": ["языки программирования"],
   "years_experience": 0,
-  "projects": ["проект"],
-  "languages": ["язык"],
-  "role_relevance": {{"Backend": 0, "Frontend": 0, "ML": 0, "Data Analyst": 0, "PM": 0}}
-}}"""
+  "projects": ["краткое описание проекта одним предложением"],
+  "education": "последнее образование одной строкой",
+  "spoken_languages": ["разговорные языки: Русский, English и т.д."],
+  "role_relevance": {{
+    "Backend": 0, "Frontend": 0, "ML": 0, "Data Analyst": 0, "PM": 0
+  }}
+}}
+
+Если поле не найдено — пустая строка "" или пустой список [].
+role_relevance: от 0 до 10, насколько резюме подходит под каждую роль."""
 
     response = await fast_llm.ainvoke(prompt)
+
     try:
-        raw = response.content.strip().replace("```json", "").replace("```", "")
-        return {"cv_data": json.loads(raw)}
+        raw = response.content.strip()
+        raw = raw.replace("```json", "").replace("```", "").strip()
+        cv_data = json.loads(raw)
     except json.JSONDecodeError:
-        return {"cv_data": {"raw": response.content, "parse_error": True}}
+        cv_data = {
+            "name": "",
+            "current_role": "",
+            "skills": [],
+            "tech_stack": [],
+            "years_experience": 0,
+            "projects": [],
+            "education": "",
+            "spoken_languages": [],
+            "role_relevance": {
+                "Backend": 5, "Frontend": 5,
+                "ML": 5, "Data Analyst": 5, "PM": 5
+            },
+            "parse_error": True
+        }
+
+    return {"cv_data": cv_data}
 
 
 @traceable(name="role_analyzer")
 async def role_analyzer(state: InterviewState) -> dict:
     cv_data = state.get("cv_data", {})
     role = state.get("role", "Backend")
-
-    # ФИX БАГ 1: убрали логику перезаписи роли — уважаем выбор пользователя
-    # role_analyzer теперь просто подтверждает роль без подмены
     return {"role": role, "cv_data": cv_data}
-
 
 @traceable(name="question_generator")
 async def question_generator(state: InterviewState) -> dict:
