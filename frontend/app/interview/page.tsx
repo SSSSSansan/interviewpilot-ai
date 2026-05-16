@@ -17,6 +17,8 @@ export default function InterviewPage() {
   const [role, setRole] = useState("");
   const [idealAnswer, setIdealAnswer] = useState("");
   const [showIdealAnswer, setShowIdealAnswer] = useState(false);
+  const [hint, setHint] = useState("");
+  const [interviewerIntro, setInterviewerIntro] = useState("");
 
   useEffect(() => {
     setThreadId(sessionStorage.getItem("thread_id") || "");
@@ -24,6 +26,7 @@ export default function InterviewPage() {
     setQuestionNumber(Number(sessionStorage.getItem("question_number")) || 1);
     setTotalQuestions(Number(sessionStorage.getItem("total_questions")) || 3);
     setRole(sessionStorage.getItem("role") || "");
+    setInterviewerIntro(sessionStorage.getItem("interviewer_intro") || "");
   }, []);
 
   async function handleSubmit() {
@@ -31,8 +34,10 @@ export default function InterviewPage() {
     setLoading(true);
     setIdealAnswer("");
     setShowIdealAnswer(false);
+    setHint("");
     try {
       const data = await submitAnswer(threadId, answer);
+
       if (data.is_complete) {
         sessionStorage.setItem("final_report", JSON.stringify(data.final_report));
         sessionStorage.setItem("all_scores", JSON.stringify(data.all_scores));
@@ -40,13 +45,21 @@ export default function InterviewPage() {
         return;
       }
 
-      if (data.last_score) setLastScore(data.last_score);
+      // Hint — кандидат не знал ответа
+      if (data.type === "hint" && data.hint) {
+        setHint(data.hint);
+        setAnswer("");
+        setLoading(false);
+        return;
+      }
+
+      if (data.last_score && Object.keys(data.last_score).length > 0) {
+        setLastScore(data.last_score);
+      }
       if (data.ideal_answer) setIdealAnswer(data.ideal_answer);
 
       const newNum = data.question_number;
-      const prevNum = questionNumber;
-      setIsFollowUp(newNum === prevNum);
-
+      setIsFollowUp(newNum === questionNumber);
       setQuestion(data.question);
       setQuestionNumber(newNum);
       setTotalQuestions(data.total_questions);
@@ -94,8 +107,34 @@ export default function InterviewPage() {
       {/* Content */}
       <div className="max-w-2xl mx-auto px-6 py-10 flex flex-col gap-5">
 
-        {/* Feedback от предыдущего ответа */}
-        {lastScore && (
+        {/* Интро интервьюера — только первый раз */}
+        {interviewerIntro && questionNumber === 1 && !lastScore && (
+          <div className="rounded-xl border border-[#E4E4E7] px-4 py-3 bg-white">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-base">🤖</span>
+              <span className="text-xs font-medium text-[#71717A] uppercase tracking-wider">
+                Интервьюер
+              </span>
+            </div>
+            <p className="text-sm text-[#18181B]">{interviewerIntro}</p>
+          </div>
+        )}
+
+        {/* Hint блок */}
+        {hint && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-base">💬</span>
+              <span className="text-xs font-semibold text-amber-800 uppercase tracking-wider">
+                Подсказка от интервьюера
+              </span>
+            </div>
+            <p className="text-sm text-amber-900 leading-relaxed">{hint}</p>
+          </div>
+        )}
+
+        {/* Фидбек от предыдущего ответа */}
+        {lastScore && lastScore.total_score !== undefined && (
           <div className={`rounded-xl border px-4 py-3 ${scoreColor(lastScore.total_score)}`}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-semibold uppercase tracking-wider">
@@ -107,7 +146,7 @@ export default function InterviewPage() {
           </div>
         )}
 
-        {/* Эталонный ответ — показывается после фидбека */}
+        {/* Эталонный ответ */}
         {idealAnswer && (
           <div className="rounded-xl border border-emerald-200 overflow-hidden">
             <button
@@ -147,7 +186,7 @@ export default function InterviewPage() {
           <textarea
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
-            placeholder="Введи ответ здесь..."
+            placeholder={hint ? "Попробуй ответить снова..." : "Введи ответ здесь..."}
             rows={6}
             className="w-full px-5 py-4 text-sm text-[#18181B] placeholder-[#A1A1AA] bg-transparent resize-none focus:outline-none leading-relaxed"
             onKeyDown={(e) => {
@@ -167,7 +206,7 @@ export default function InterviewPage() {
                 disabled={loading || !answer.trim()}
                 className="px-4 py-1.5 rounded-lg bg-[#18181B] text-white text-sm font-medium hover:bg-[#27272A] disabled:bg-[#D4D4D8] disabled:cursor-not-allowed transition-colors"
               >
-                {loading ? "Оцениваем..." : "Отправить"}
+                {loading ? "Оцениваем..." : hint ? "Попробовать снова" : "Отправить"}
               </button>
             </div>
           </div>

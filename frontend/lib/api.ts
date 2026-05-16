@@ -1,9 +1,13 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
-export async function startInterview(role: string, resumeFile?: File) {
+export async function startInterview(
+  role: string,
+  interviewerStyle: string,
+  resumeFile?: File
+) {
   const formData = new FormData();
   formData.append("role", role);
-  formData.append("interviewer_style", "friendly");
+  formData.append("interviewer_style", interviewerStyle);
   if (resumeFile) {
     formData.append("resume_pdf", resumeFile);
   }
