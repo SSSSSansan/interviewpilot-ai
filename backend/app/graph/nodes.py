@@ -18,18 +18,34 @@ fast_llm = ChatOpenAI(model=FAST_MODEL, temperature=0.7)
 eval_llm = ChatOpenAI(model=FAST_MODEL, temperature=0.2)
 smart_llm = ChatOpenAI(model=SMART_MODEL, temperature=0.3)
 
+# ── Личность интервьюера ──────────────────────────────────────────────
+INTERVIEWER_PROMPTS = {
+    "strict": (
+        "Ты строгий технический интервьюер из крупной tech-компании. "
+        "Краткие точные вопросы. Никаких похвал. Сразу переходи к сути. "
+        "Если ответ слабый — говори прямо."
+    ),
+    "friendly": (
+        "Ты дружелюбный CTO стартапа. Поддерживаешь кандидата, "
+        "объясняешь зачем важен вопрос. Но стандарты не снижаешь. "
+        "Используй разговорный тон."
+    ),
+    "academic": (
+        "Ты академичный технический интервьюер. Просишь точные определения, "
+        "ссылаешься на Computer Science принципы. "
+        "Оцениваешь строгость формулировок и теоретическую базу."
+    ),
+}
+
+def get_personality(style: str) -> str:
+    return INTERVIEWER_PROMPTS.get(style, INTERVIEWER_PROMPTS["friendly"])
+
 
 @traceable(name="resume_parser")
 async def resume_parser(state: InterviewState) -> dict:
-    """
-    Парсит PDF резюме.
-    Поддерживает русский и английский.
-    Берёт pdf_path из state (файл сохраняется роутом перед запуском графа).
-    """
     import re
     pdf_path = state.get("pdf_path", "")
 
-    # --- Заглушка если PDF не передан ---
     if not pdf_path or not os.path.exists(pdf_path):
         return {
             "cv_data": {
@@ -49,7 +65,6 @@ async def resume_parser(state: InterviewState) -> dict:
             }
         }
 
-    # --- Извлекаем текст через PyMuPDF ---
     try:
         import fitz
         doc = fitz.open(pdf_path)
@@ -58,7 +73,6 @@ async def resume_parser(state: InterviewState) -> dict:
     except Exception as e:
         return {"cv_data": {"error": str(e)}}
 
-    # Определяем язык резюме
     has_cyrillic = bool(re.search(r'[а-яёА-ЯЁ]', text))
     language_hint = (
         "Резюме написано на русском языке."
@@ -95,23 +109,14 @@ role_relevance: от 0 до 10, насколько резюме подходит
     response = await fast_llm.ainvoke(prompt)
 
     try:
-        raw = response.content.strip()
-        raw = raw.replace("```json", "").replace("```", "").strip()
+        raw = response.content.strip().replace("```json", "").replace("```", "").strip()
         cv_data = json.loads(raw)
     except json.JSONDecodeError:
         cv_data = {
-            "name": "",
-            "current_role": "",
-            "skills": [],
-            "tech_stack": [],
-            "years_experience": 0,
-            "projects": [],
-            "education": "",
+            "name": "", "current_role": "", "skills": [], "tech_stack": [],
+            "years_experience": 0, "projects": [], "education": "",
             "spoken_languages": [],
-            "role_relevance": {
-                "Backend": 5, "Frontend": 5,
-                "ML": 5, "Data Analyst": 5, "PM": 5
-            },
+            "role_relevance": {"Backend": 5, "Frontend": 5, "ML": 5, "Data Analyst": 5, "PM": 5},
             "parse_error": True
         }
 
@@ -123,6 +128,7 @@ async def role_analyzer(state: InterviewState) -> dict:
     cv_data = state.get("cv_data", {})
     role = state.get("role", "Backend")
     return {"role": role, "cv_data": cv_data}
+
 
 @traceable(name="question_generator")
 async def question_generator(state: InterviewState) -> dict:
@@ -138,19 +144,20 @@ async def question_generator(state: InterviewState) -> dict:
 
     cv_data = state.get("cv_data", {})
     role = state.get("role", "Backend")
+    style = state.get("interviewer_style", "friendly")
+    personality = get_personality(style)
     n_questions = 3 if DEV_MODE else 5
     cv_summary = json.dumps(cv_data, ensure_ascii=False)[:600]
 
-    # ФИX БАГ 1: роль явно передаётся в промпт и подчёркивается
-    prompt = f"""Ты технический интервьюер. Сгенерируй ровно {n_questions} вопроса ТОЛЬКО для роли: {role}.
+    prompt = f"""{personality}
 
-ВАЖНО: вопросы должны быть строго по специализации "{role}". 
-Не задавай вопросы по другим ролям.
+Сгенерируй ровно {n_questions} вопроса для роли: {role}.
+ВАЖНО: вопросы строго по специализации "{role}".
 
 CV кандидата: {cv_summary}
 
-Примеры тем для роли {role}:
-- Если ML Engineer: ML алгоритмы, обучение моделей, метрики, фреймворки (PyTorch/TensorFlow/sklearn)
+Темы для роли {role}:
+- Если ML Engineer: ML алгоритмы, обучение моделей, метрики, фреймворки
 - Если Frontend Engineer: React/Vue, CSS, браузерные API, производительность
 - Если Backend Engineer: API, БД, архитектура сервисов, кэширование
 - Если Data Analyst: SQL, статистика, визуализация, A/B тесты
@@ -184,15 +191,16 @@ async def answer_evaluator(state: InterviewState) -> dict:
     question = state.get("current_question", "")
     answer = state.get("current_answer", "")
     role = state.get("role", "Backend")
+    style = state.get("interviewer_style", "friendly")
     cv_data = state.get("cv_data", {})
+    personality = get_personality(style)
 
-    # Краткий контекст CV для персонализации фидбека
     cv_context = ""
     if cv_data.get("tech_stack"):
         cv_context = f"Стек кандидата: {', '.join(cv_data['tech_stack'][:5])}"
 
-    prompt = f"""Ты строгий технический интервьюер. Роль кандидата: {role}.
-{cv_context}
+    prompt = f"""{personality}
+Роль кандидата: {role}. {cv_context}
 
 Вопрос: {question}
 Ответ кандидата: {answer}
@@ -206,16 +214,16 @@ async def answer_evaluator(state: InterviewState) -> dict:
 
 is_weak = true если сумма < 6.
 
-ideal_answer — напиши пример сильного ответа (3-5 предложений).
+ideal_answer — пример сильного ответа (3-5 предложений).
 Как ответил бы опытный инженер с 3+ годами опыта.
-Используй правильные термины. Структура: суть → детали → пример.
+Структура: суть → детали → пример.
 
 Верни ТОЛЬКО валидный JSON без markdown:
 {{
   "scores": {{"technical_correctness": 1, "clarity": 1, "depth": 1, "confidence": 1, "communication": 1}},
   "total_score": 5,
   "reasoning": "краткое объяснение оценки",
-  "feedback": "конкретный фидбек 2-3 предложения — что хорошо и что улучшить",
+  "feedback": "конкретный фидбек 2-3 предложения",
   "ideal_answer": "пример сильного ответа 3-5 предложений",
   "is_weak": true
 }}"""
@@ -225,25 +233,18 @@ ideal_answer — напиши пример сильного ответа (3-5 п
     try:
         raw = response.content.strip().replace("```json", "").replace("```", "")
         result = json.loads(raw)
-
-        # Защита: каждый критерий строго 0-2
         for k in result["scores"]:
             result["scores"][k] = max(0, min(2, int(result["scores"][k])))
         result["total_score"] = sum(result["scores"].values())
         result["is_weak"] = result["total_score"] < 6
-
-        # Защита: если ideal_answer не пришёл
         if not result.get("ideal_answer"):
             result["ideal_answer"] = ""
-
     except json.JSONDecodeError:
         result = {
-            "scores": {
-                "technical_correctness": 1, "clarity": 1, "depth": 1,
-                "confidence": 1, "communication": 1
-            },
+            "scores": {"technical_correctness": 1, "clarity": 1, "depth": 1,
+                       "confidence": 1, "communication": 1},
             "total_score": 5,
-            "reasoning": "Ошибка парсинга ответа",
+            "reasoning": "Ошибка парсинга",
             "feedback": "Попробуйте ответить подробнее",
             "ideal_answer": "",
             "is_weak": True,
@@ -261,9 +262,12 @@ async def follow_up(state: InterviewState) -> dict:
     answer = state.get("current_answer", "")
     feedback = state.get("current_score", {}).get("feedback", "")
     follow_up_count = state.get("follow_up_count", 0)
+    style = state.get("interviewer_style", "friendly")
+    personality = get_personality(style)
 
-    prompt = f"""Кандидат слабо ответил. Задай один уточняющий вопрос.
+    prompt = f"""{personality}
 
+Кандидат слабо ответил. Задай один уточняющий вопрос.
 Исходный вопрос: {question}
 Ответ: {answer}
 Что не так: {feedback}
@@ -271,7 +275,6 @@ async def follow_up(state: InterviewState) -> dict:
 Верни ТОЛЬКО текст вопроса."""
 
     response = await fast_llm.ainvoke(prompt)
-
     return {
         "current_question": response.content.strip(),
         "current_answer": "",
@@ -296,7 +299,7 @@ async def next_question(state: InterviewState) -> dict:
         "current_question_index": next_index,
         "current_question": questions[next_index],
         "current_answer": "",
-        "follow_up_count": 0,  # ФИX БАГ 3: сбрасываем счётчик follow_up для нового вопроса
+        "follow_up_count": 0,
         "is_complete": False,
     }
 
@@ -335,6 +338,7 @@ async def final_feedback(state: InterviewState) -> dict:
     response = await smart_llm.ainvoke(prompt)
     return {"final_report": response.content}
 
+
 def is_dont_know(answer: str) -> bool:
     dont_know_phrases = [
         "не знаю", "незнаю", "не знаю как", "затрудняюсь",
@@ -348,22 +352,15 @@ def is_dont_know(answer: str) -> bool:
 
 @traceable(name="hint_node")
 async def hint_node(state: InterviewState) -> dict:
-    """
-    Проверяет ответ. Если "не знаю" — генерирует hint и выставляет awaiting_retry.
-    Если нормальный ответ — пропускает дальше без изменений.
-    """
     answer = state.get("current_answer", "")
     awaiting_retry = state.get("awaiting_retry", False)
 
-    # Если уже показали hint — сбрасываем флаг и идём оценивать
     if awaiting_retry:
         return {"awaiting_retry": False, "hint": ""}
 
-    # Если нормальный ответ — просто пропускаем
     if not is_dont_know(answer):
         return {"awaiting_retry": False, "hint": ""}
 
-    # Генерируем hint
     question = state.get("current_question", "")
     style = state.get("interviewer_style", "friendly")
 
@@ -385,10 +382,8 @@ async def hint_node(state: InterviewState) -> dict:
 Верни только текст подсказки, без пояснений и кавычек."""
 
     response = await fast_llm.ainvoke(prompt)
-    hint_text = response.content.strip()
-
     return {
-        "hint": hint_text,
+        "hint": response.content.strip(),
         "awaiting_retry": True,
         "current_answer": "",
     }
