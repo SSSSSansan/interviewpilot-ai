@@ -1,0 +1,272 @@
+[
+  {
+    "id": 1,
+    "role": "Backend",
+    "question": "Что такое индекс в базе данных и когда его не стоит добавлять?",
+    "answer": "Индекс ускоряет поиск в базе данных.",
+    "expected_score_min": 2,
+    "expected_score_max": 4,
+    "answer_type": "weak"
+  },
+  {
+    "id": 2,
+    "role": "Backend",
+    "question": "Что такое индекс в базе данных и когда его не стоит добавлять?",
+    "answer": "Индекс — это вспомогательная структура данных (обычно B-tree), которая ускоряет SELECT запросы за счёт дополнительного хранилища и замедления INSERT/UPDATE/DELETE. Не стоит добавлять индекс на колонки с низкой кардинальностью (например, boolean или статус с 3 значениями), на таблицы где записей мало и full scan быстрее, и на колонки где запись происходит очень часто а чтений почти нет.",
+    "expected_score_min": 7,
+    "expected_score_max": 10,
+    "answer_type": "strong"
+  },
+  {
+    "id": 3,
+    "role": "Backend",
+    "question": "Объясни разницу между SQL и NoSQL базами данных.",
+    "answer": "SQL — это таблицы, NoSQL — это не таблицы. SQL медленнее, NoSQL быстрее.",
+    "expected_score_min": 1,
+    "expected_score_max": 3,
+    "answer_type": "weak"
+  },
+  {
+    "id": 4,
+    "role": "Backend",
+    "question": "Объясни разницу между SQL и NoSQL базами данных.",
+    "answer": "SQL — реляционные базы с фиксированной схемой и ACID транзакциями, например PostgreSQL и MySQL. Хорошо подходят для финансов и e-commerce где важна целостность данных. NoSQL — гибкая схема, горизонтальное масштабирование, примеры: MongoDB (документы), Redis (кэш), Cassandra (wide-column). Выбор зависит от задачи: если нужны транзакции и JOIN — SQL, если нужна скорость записи и масштаб — NoSQL.",
+    "expected_score_min": 7,
+    "expected_score_max": 10,
+    "answer_type": "strong"
+  },
+  {
+    "id": 5,
+    "role": "Backend",
+    "question": "Что такое REST и какие у него ограничения?",
+    "answer": "REST это API через HTTP с методами GET POST PUT DELETE.",
+    "expected_score_min": 2,
+    "expected_score_max": 4,
+    "answer_type": "weak"
+  },
+  {
+    "id": 6,
+    "role": "Backend",
+    "question": "Что такое REST и какие у него ограничения?",
+    "answer": "REST — архитектурный стиль для API на базе HTTP. Принципы: stateless (каждый запрос самодостаточен), uniform interface (стандартные HTTP методы), ресурсы по URL. Ограничения: overfetching (получаешь лишние поля), underfetching (нужно несколько запросов для связанных данных), нет встроенной типизации. Альтернативы: GraphQL решает overfetching, gRPC даёт типизацию и скорость через protobuf.",
+    "expected_score_min": 7,
+    "expected_score_max": 10,
+    "answer_type": "strong"
+  },
+  {
+    "id": 7,
+    "role": "Backend",
+    "question": "Что такое Docker и зачем он нужен?",
+    "answer": "Не знаю точно, что-то для запуска приложений.",
+    "expected_score_min": 0,
+    "expected_score_max": 2,
+    "answer_type": "dont_know"
+  },
+  {
+    "id": 8,
+    "role": "Backend",
+    "question": "Что такое Docker и зачем он нужен?",
+    "answer": "Docker — платформа контейнеризации. Контейнер упаковывает приложение со всеми зависимостями в изолированную среду, решая проблему 'у меня работает, у тебя нет'. Отличие от VM: контейнеры делят ядро ОС с хостом, поэтому легче и быстрее запускаются. Основные концепции: Image (неизменяемый шаблон), Container (запущенный instance), Dockerfile (инструкция сборки), docker-compose для многоконтейнерных приложений.",
+    "expected_score_min": 7,
+    "expected_score_max": 10,
+    "answer_type": "strong"
+  },
+  {
+    "id": 9,
+    "role": "Frontend",
+    "question": "Что такое виртуальный DOM в React и зачем он нужен?",
+    "answer": "Виртуальный DOM это копия реального DOM в памяти.",
+    "expected_score_min": 2,
+    "expected_score_max": 4,
+    "answer_type": "weak"
+  },
+  {
+    "id": 10,
+    "role": "Frontend",
+    "question": "Что такое виртуальный DOM в React и зачем он нужен?",
+    "answer": "Virtual DOM — это лёгкое представление реального DOM в памяти. При изменении состояния React создаёт новый Virtual DOM, сравнивает его с предыдущим через алгоритм reconciliation (diffing), и применяет к реальному DOM только минимально необходимые изменения. Это быстрее чем напрямую манипулировать DOM при каждом изменении, так как операции с реальным DOM дорогостоящие — они вызывают reflow и repaint браузера.",
+    "expected_score_min": 7,
+    "expected_score_max": 10,
+    "answer_type": "strong"
+  },
+  {
+    "id": 11,
+    "role": "Frontend",
+    "question": "Объясни разницу между useEffect и useLayoutEffect.",
+    "answer": "useEffect запускается после рендера, useLayoutEffect до.",
+    "expected_score_min": 2,
+    "expected_score_max": 5,
+    "answer_type": "weak"
+  },
+  {
+    "id": 12,
+    "role": "Frontend",
+    "question": "Объясни разницу между useEffect и useLayoutEffect.",
+    "answer": "useEffect запускается асинхронно после того как браузер отрисовал изменения — подходит для большинства side effects (запросы к API, подписки). useLayoutEffect запускается синхронно после DOM мутаций но до отрисовки браузером — нужен когда надо измерить DOM или синхронно обновить стили до того как пользователь увидит изменение. Использование useLayoutEffect по умолчанию — антипаттерн, так как блокирует отрисовку.",
+    "expected_score_min": 7,
+    "expected_score_max": 10,
+    "answer_type": "strong"
+  },
+  {
+    "id": 13,
+    "role": "ML",
+    "question": "Что такое overfitting и как с ним бороться?",
+    "answer": "Overfitting это когда модель переобучается на тренировочных данных.",
+    "expected_score_min": 2,
+    "expected_score_max": 4,
+    "answer_type": "weak"
+  },
+  {
+    "id": 14,
+    "role": "ML",
+    "question": "Что такое overfitting и как с ним бороться?",
+    "answer": "Overfitting — модель слишком хорошо запомнила тренировочные данные включая шум, и плохо обобщается на новые данные (высокая train accuracy, низкая val accuracy). Методы борьбы: регуляризация (L1/L2 добавляют штраф за большие веса), dropout (случайно отключает нейроны при обучении), early stopping (останавливаем когда val loss начинает расти), увеличение датасета или data augmentation, уменьшение сложности модели.",
+    "expected_score_min": 7,
+    "expected_score_max": 10,
+    "answer_type": "strong"
+  },
+  {
+    "id": 15,
+    "role": "ML",
+    "question": "Объясни разницу между precision и recall.",
+    "answer": "Precision это точность, recall это полнота модели.",
+    "expected_score_min": 1,
+    "expected_score_max": 3,
+    "answer_type": "weak"
+  },
+  {
+    "id": 16,
+    "role": "ML",
+    "question": "Объясни разницу между precision и recall.",
+    "answer": "Precision — из всех предсказанных положительных сколько реально положительные (TP / (TP + FP)). Recall — из всех реальных положительных сколько мы нашли (TP / (TP + FN)). Precision важен когда дорого ложное срабатывание (спам фильтр — лучше пропустить спам чем удалить важное письмо). Recall важен когда дорого пропустить позитив (диагностика болезни — лучше лишний раз проверить). F1 score — гармоническое среднее, баланс между ними.",
+    "expected_score_min": 7,
+    "expected_score_max": 10,
+    "answer_type": "strong"
+  },
+  {
+    "id": 17,
+    "role": "Data Analyst",
+    "question": "Что такое A/B тестирование и какие ошибки часто допускают?",
+    "answer": "A/B тест это когда сравниваешь две версии чего-то.",
+    "expected_score_min": 1,
+    "expected_score_max": 3,
+    "answer_type": "weak"
+  },
+  {
+    "id": 18,
+    "role": "Data Analyst",
+    "question": "Что такое A/B тестирование и какие ошибки часто допускают?",
+    "answer": "A/B тест — контролируемый эксперимент где аудиторию случайно делят на контрольную и тестовую группы, меняют одну переменную и измеряют статистически значимую разницу. Частые ошибки: остановить тест как только увидел нужный результат (p-hacking), не рассчитать нужный размер выборки заранее (недостаточная мощность), тестировать несколько изменений одновременно, игнорировать сегментацию (результат может отличаться для разных пользователей), не учитывать novelty effect.",
+    "expected_score_min": 7,
+    "expected_score_max": 10,
+    "answer_type": "strong"
+  },
+  {
+    "id": 19,
+    "role": "Data Analyst",
+    "question": "Объясни разницу между GROUP BY и HAVING в SQL.",
+    "answer": "GROUP BY группирует строки, HAVING фильтрует группы.",
+    "expected_score_min": 3,
+    "expected_score_max": 5,
+    "answer_type": "medium"
+  },
+  {
+    "id": 20,
+    "role": "Data Analyst",
+    "question": "Объясни разницу между GROUP BY и HAVING в SQL.",
+    "answer": "GROUP BY агрегирует строки по значению колонки, применяется до агрегатных функций. HAVING фильтрует уже сгруппированные результаты — в отличие от WHERE которая фильтрует строки до группировки. Важно: WHERE нельзя использовать с агрегатными функциями (COUNT, SUM), для этого нужен HAVING. Порядок выполнения: FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY.",
+    "expected_score_min": 7,
+    "expected_score_max": 10,
+    "answer_type": "strong"
+  },
+  {
+    "id": 21,
+    "role": "PM",
+    "question": "Как ты приоритизируешь задачи в бэклоге?",
+    "answer": "Смотрю что важнее и ставлю в начало.",
+    "expected_score_min": 1,
+    "expected_score_max": 3,
+    "answer_type": "weak"
+  },
+  {
+    "id": 22,
+    "role": "PM",
+    "question": "Как ты приоритизируешь задачи в бэклоге?",
+    "answer": "Использую несколько фреймворков в зависимости от контекста. RICE: Reach (охват), Impact (влияние), Confidence (уверенность), Effort (усилия) — даёт числовой score. ICE — упрощённая версия. MoSCoW — делю на Must have, Should have, Could have, Won't have для планирования релиза. Всегда выравниваю с бизнес-целями квартала, учитываю технический долг и зависимости. Главное — не приоритизировать в одиночку, выравниваю с engineering и stakeholders.",
+    "expected_score_min": 7,
+    "expected_score_max": 10,
+    "answer_type": "strong"
+  },
+  {
+    "id": 23,
+    "role": "PM",
+    "question": "Что такое метрика North Star и как её выбрать?",
+    "answer": "North Star это главная метрика продукта.",
+    "expected_score_min": 2,
+    "expected_score_max": 4,
+    "answer_type": "weak"
+  },
+  {
+    "id": 24,
+    "role": "PM",
+    "question": "Что такое метрика North Star и как её выбрать?",
+    "answer": "North Star Metric — одна метрика которая лучше всего отражает ценность которую продукт даёт пользователям и коррелирует с долгосрочным ростом бизнеса. Критерии выбора: отражает активацию ценности (не просто регистрации), actionable (команда может на неё влиять), leading indicator (предсказывает revenue). Примеры: Spotify — время прослушивания, Airbnb — ночей забронировано, WhatsApp — сообщений отправлено. Вокруг NSM строятся input metrics — рычаги которые на неё влияют.",
+    "expected_score_min": 7,
+    "expected_score_max": 10,
+    "answer_type": "strong"
+  },
+  {
+    "id": 25,
+    "role": "DevOps",
+    "question": "Объясни разницу между blue-green и canary деплойментом.",
+    "answer": "Blue-green это два окружения, canary это постепенный деплой.",
+    "expected_score_min": 2,
+    "expected_score_max": 5,
+    "answer_type": "weak"
+  },
+  {
+    "id": 26,
+    "role": "DevOps",
+    "question": "Объясни разницу между blue-green и canary деплойментом.",
+    "answer": "Blue-green — два идентичных окружения, переключаешь весь трафик сразу. Плюс: мгновенный rollback (переключил обратно), минус: двойная стоимость инфраструктуры. Canary — постепенно направляешь процент трафика на новую версию (1% → 10% → 100%), мониторишь метрики на каждом шаге. Плюс: меньше blast radius если что сломалось, тестируешь на реальном трафике. Минус: дольше, нужна умная маршрутизация. Canary лучше для высоконагруженных систем где риски высоки.",
+    "expected_score_min": 7,
+    "expected_score_max": 10,
+    "answer_type": "strong"
+  },
+  {
+    "id": 27,
+    "role": "Backend",
+    "question": "Что такое микросервисы и в чём их минусы?",
+    "answer": "Микросервисы лучше монолита потому что каждый сервис независимый.",
+    "expected_score_min": 2,
+    "expected_score_max": 4,
+    "answer_type": "weak"
+  },
+  {
+    "id": 28,
+    "role": "Backend",
+    "question": "Что такое микросервисы и в чём их минусы?",
+    "answer": "Микросервисы — архитектура где приложение разбито на независимые сервисы по бизнес-доменам, каждый деплоится и масштабируется отдельно. Минусы: сложность distributed systems (network latency, partial failures, eventual consistency), сложность отладки (нужен distributed tracing), overhead на межсервисное взаимодействие, сложная транзакционность. Микросервисы не нужны маленьким командам — монолит проще и быстрее в разработке на ранних стадиях.",
+    "expected_score_min": 7,
+    "expected_score_max": 10,
+    "answer_type": "strong"
+  },
+  {
+    "id": 29,
+    "role": "ML",
+    "question": "Что такое gradient descent и как он работает?",
+    "answer": "",
+    "expected_score_min": 0,
+    "expected_score_max": 2,
+    "answer_type": "empty"
+  },
+  {
+    "id": 30,
+    "role": "ML",
+    "question": "Что такое gradient descent и как он работает?",
+    "answer": "Gradient descent — оптимизационный алгоритм для минимизации функции потерь. На каждом шаге вычисляем градиент (частные производные loss по весам) — направление наибольшего роста. Двигаемся в противоположном направлении с шагом learning rate. Варианты: Batch GD (весь датасет за раз — медленно), Stochastic GD (один пример — шумно), Mini-batch GD (батч примеров — баланс, используется на практике). Learning rate критичен: слишком большой — расходится, слишком маленький — медленно сходится.",
+    "expected_score_min": 7,
+    "expected_score_max": 10,
+    "answer_type": "strong"
+  }
+]
