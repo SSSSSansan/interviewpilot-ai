@@ -1,0 +1,41 @@
+ROLE: iOS Developer
+
+Q: Что такое ARC и как работает управление памятью в Swift?
+A (strong): ARC (Automatic Reference Counting) — автоматическое управление памятью. Каждый объект имеет счётчик ссылок. Когда счётчик падает до 0 — объект освобождается. Strong reference увеличивает счётчик (по умолчанию). Weak — не увеличивает, становится nil когда объект освобождается. Unowned — не увеличивает, не становится nil (краш если объект уже освобождён). Retain cycle — два объекта держат strong ссылки друг на друга, счётчик никогда не падает до 0, утечка памяти. Решение: weak или unowned в замыканиях ([weak self]) и делегатах (weak var delegate).
+A (weak): ARC автоматически управляет памятью, не нужно думать об освобождении.
+Red flags: не знает что такое retain cycle, не понимает разницу weak vs unowned.
+
+Q: Объясни разницу между struct и class в Swift.
+A (strong): Struct — value type, копируется при присваивании. Class — reference type, передаётся по ссылке. Struct не поддерживает наследование, class поддерживает. Struct дешевле по памяти для маленьких объектов. В Swift рекомендуется использовать struct по умолчанию — меньше retain cycles, безопаснее в многопоточности (каждый поток работает с копией). Class нужен когда: нужно наследование, нужна идентичность объекта (===), нужно разделять состояние между частями кода.
+A (weak): Struct это структура, class это класс, struct не может наследоваться.
+Red flags: не знает про value vs reference type, не может объяснить когда выбрать struct.
+
+Q: Что такое optionals и как безопасно работать с ними?
+A (strong): Optional — тип который может содержать значение или nil. Объявляется через ? (var name: String?). Безопасная работа: if let (scope внутри блока), guard let (early return при nil, значение доступно дальше в функции), ?? (default значение если nil), optional chaining user?.address?.city (возвращает nil если любое звено nil). Force unwrap (!) — опасен, краш если nil, использовать только когда 100% уверен. Implicitly Unwrapped Optional (String!) — для IBOutlets где значение гарантированно установлено до использования.
+A (weak): Optional это когда переменная может быть nil, используй ! чтобы получить значение.
+Red flags: предлагает force unwrap как основной способ, не знает guard let.
+
+Q: Как работает жизненный цикл UIViewController?
+A (strong): viewDidLoad — вызывается один раз, view загружена в память. Инициализация данных, настройка UI. viewWillAppear — каждый раз перед показом. Обновление данных которые могли измениться. viewDidAppear — view показана, запуск анимаций, аналитика. viewWillDisappear — перед скрытием, сохранение состояния. viewDidDisappear — view скрыта, остановка тяжёлых процессов. deinit — объект освобождается. Типичная ошибка: делать сетевые запросы в viewDidLoad каждый раз — лучше в viewWillAppear если данные должны обновляться.
+A (weak): viewDidLoad это когда view загрузилась, там инициализируешь всё.
+Red flags: знает только viewDidLoad, не понимает разницу между willAppear и didAppear.
+
+Q: Объясни MVVM в контексте iOS разработки.
+A (strong): MVVM — Model, View, ViewModel. Model — данные и бизнес-логика. View (ViewController + UIView) — отображение, реагирует на изменения ViewModel. ViewModel — посредник: получает данные из Model, трансформирует для отображения, не импортирует UIKit. Преимущество перед MVC: ViewModel можно тестировать без UI (нет UIKit зависимостей), ViewController становится тоньше. Связь View и ViewModel через: Combine/RxSwift для биндингов, колбэки/замыкания, или вручную через didSet. Проблема MVC — "Massive ViewController" где вся логика в одном файле.
+A (weak): MVVM это паттерн где есть Model, View и ViewModel.
+Red flags: не может объяснить зачем нужен ViewModel если есть MVC, не знает как связать View и ViewModel.
+
+Q: Что такое Grand Central Dispatch и как правильно работать с потоками?
+A (strong): GCD — Apple API для многопоточности. DispatchQueue.main — главный поток, только здесь обновляем UI. DispatchQueue.global() — фоновые потоки для тяжёлых задач (сеть, парсинг, вычисления). async — не блокирует текущий поток. sync — блокирует (осторожно: sync на main из main — deadlock). Правило: тяжёлая работа на global, результат обновляет UI только на main. Современная альтернатива: Swift Concurrency (async/await) с @MainActor для UI работы. Никогда не обновляй UIKit элементы из фонового потока — краш или непредсказуемое поведение.
+A (weak): GCD это многопоточность в iOS, используешь DispatchQueue.
+Red flags: не знает что UI только на main thread, не понимает разницу async vs sync.
+
+Q: Как работает URLSession и как правильно делать сетевые запросы?
+A (strong): URLSession — стандартный API для HTTP запросов. Современный подход: async/await с URLSession.data(from: url). Обработка ошибок через do/catch. Декодирование через JSONDecoder и Codable протокол. Важно: сетевые запросы всегда на фоновом потоке, обновление UI через @MainActor или DispatchQueue.main. Отмена запросов через Task.cancel(). Конфигурация: таймауты, заголовки, кэширование через URLSessionConfiguration. Не используй synchronous запросы — блокируют поток.
+A (weak): URLSession это для запросов к API, создаёшь dataTask и запускаешь.
+Red flags: не знает про Codable, делает запросы на main thread, не обрабатывает ошибки.
+
+Q: Чем SwiftUI отличается от UIKit и когда использовать каждый?
+A (strong): UIKit — imperative: ты описываешь как изменить UI (addSubview, constraints, frame). SwiftUI — declarative: описываешь как UI должен выглядеть при каждом состоянии, фреймворк сам обновляет. SwiftUI плюсы: меньше кода, Preview в реальном времени, работает на всех Apple платформах, автоматические анимации состояния. UIKit плюсы: более зрелый, более гибкий для сложного кастомного UI, лучше для legacy кодовой базы, больше контроля. Выбор: новые проекты iOS 15+ — SwiftUI. Большой legacy проект — UIKit с постепенным добавлением SwiftUI через UIHostingController.
+A (weak): SwiftUI новее и проще, UIKit старый и сложный.
+Red flags: не знает декларативный vs imperative подход, считает что UIKit устарел и не нужен.

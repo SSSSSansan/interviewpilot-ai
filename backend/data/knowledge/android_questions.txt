@@ -1,0 +1,41 @@
+ROLE: Android Developer
+
+Q: Объясни жизненный цикл Activity и почему это важно.
+A (strong): onCreate — Activity создаётся, инициализация UI и данных. onStart — Activity становится видимой. onResume — Activity на переднем плане, принимает события пользователя. onPause — теряет фокус (другая Activity поверх), сохраняй несохранённые данные. onStop — Activity не видна. onDestroy — Activity уничтожается. При повороте экрана: onPause → onStop → onDestroy → onCreate → onStart → onResume. Решение: ViewModel сохраняет данные через rotation. Типичная ошибка: запускать тяжёлые операции в onCreate на main thread.
+A (weak): onCreate это когда Activity создаётся, onDestroy когда закрывается.
+Red flags: не знает что происходит при rotation, не понимает зачем нужен ViewModel для сохранения состояния.
+
+Q: Что такое ViewModel и зачем он нужен в Android?
+A (strong): ViewModel — компонент Architecture Components. Хранит UI state и переживает configuration changes (поворот экрана, смена языка) — Activity пересоздаётся, ViewModel нет. Не держит ссылку на Context/Activity — нет утечек памяти. Содержит бизнес-логику, получает данные из Repository. View (Activity/Fragment) подписывается на данные через LiveData или StateFlow. Без ViewModel: либо теряешь данные при rotation, либо делаешь повторный сетевой запрос, либо кладёшь всё в onSaveInstanceState (ограничен по размеру).
+A (weak): ViewModel хранит данные и переживает поворот экрана.
+Red flags: не знает почему нельзя держать Context в ViewModel, не понимает связь с LiveData/StateFlow.
+
+Q: Объясни разницу между корутинами launch и async в Kotlin.
+A (strong): Обе запускают корутины. launch — fire and forget, возвращает Job, результата нет. Используй когда не нужен результат (обновить UI, записать в БД). async — возвращает Deferred, вызываешь .await() чтобы получить результат. Используй когда нужен результат или параллельное выполнение: val result1 = async { fetch1() }; val result2 = async { fetch2() }; результаты приходят параллельно, не последовательно. Suspend функции можно вызывать только из корутины или другой suspend функции.
+A (weak): launch запускает корутину, async возвращает результат.
+Red flags: не знает про параллельное выполнение с async, не понимает suspend функции.
+
+Q: Что такое RecyclerView и почему не стоит использовать ListView?
+A (strong): RecyclerView — компонент для отображения больших списков. Ключевое отличие от ListView: обязательный ViewHolder паттерн (переиспользование views вместо создания новых), LayoutManager (вертикальный, горизонтальный, grid, staggered), ItemAnimator (анимации по умолчанию), DiffUtil (эффективное обновление только изменившихся элементов). ListView создаёт новый View для каждого элемента — при быстром скролле лаги. RecyclerView переиспользует — плавный скролл. DiffUtil важен: notifyDataSetChanged() перерисовывает всё, DiffUtil перерисовывает только изменения.
+A (weak): RecyclerView лучше ListView, более гибкий.
+Red flags: не знает ViewHolder паттерн, не знает DiffUtil, не может объяснить почему RecyclerView быстрее.
+
+Q: Как работает dependency injection в Android с Hilt?
+A (strong): DI — паттерн где объекты получают зависимости снаружи вместо создания их сами. Hilt — DI фреймворк от Google, надстройка над Dagger. @HiltAndroidApp на Application классе. @AndroidEntryPoint на Activity/Fragment. @Inject constructor для инжекции через конструктор. @HiltViewModel для ViewModel. Модули (@Module, @InstallIn) для предоставления зависимостей которые нельзя пометить @Inject (Retrofit, Room). Scopes: ApplicationComponent (singleton), ActivityComponent (живёт с Activity), ViewModelComponent. Без DI: тяжело тестировать (нельзя подменить реальную сеть на mock), высокая связность кода.
+A (weak): Hilt это чтобы не создавать объекты вручную через new.
+Red flags: не понимает зачем DI нужен для тестирования, не знает про scopes.
+
+Q: Объясни паттерн Repository в Android.
+A (strong): Repository — слой абстракции над источниками данных. ViewModel не знает откуда берутся данные — из сети, кэша или БД. Repository решает: если данные свежие в Room — отдай из кэша, иначе иди в сеть, сохрани в Room, отдай. Преимущества: ViewModel тестируется с mock Repository, легко добавить кэширование, легко сменить источник данных. Single source of truth: Room — главный источник данных, сеть обновляет Room, UI читает из Room через Flow. Типичная ошибка — делать сетевые запросы прямо из ViewModel.
+A (weak): Repository это посредник между ViewModel и данными.
+Red flags: не понимает single source of truth, не знает как Repository помогает тестированию.
+
+Q: Что такое Jetpack Compose и как он отличается от XML разметки?
+A (strong): Compose — декларативный UI фреймворк. XML — imperative: описываешь структуру, потом в коде меняешь состояние (findViewById, setText). Compose — декларативный: описываешь UI для каждого состояния, при изменении state Compose автоматически перерисовывает (recomposition). @Composable функции — строительные блоки UI. remember — сохраняет значение между recomposition. State hoisting — поднимаешь state вверх чтобы composable был stateless и переиспользуемым. Плюсы: меньше кода, нет findViewById, Preview в реальном времени, проще анимации состояний.
+A (weak): Compose новый способ верстать без XML, более современный.
+Red flags: не знает что такое recomposition, не понимает state hoisting.
+
+Q: Как избежать утечек памяти в Android?
+A (strong): Главные причины утечек: 1) Static ссылка на Activity/Context — никогда не храни Activity в static поле. 2) Inner class держит ссылку на внешний класс — используй static inner class или WeakReference. 3) Незакрытые ресурсы (Cursor, Stream) — закрывай в finally или use{}. 4) Незарегистрированные listeners — отписывайся в onStop/onDestroy. 5) Coroutines без привязки к lifecycle — используй viewModelScope или lifecycleScope. Инструменты диагностики: LeakCanary (автоматически детектирует утечки), Android Profiler в Android Studio.
+A (weak): Утечки памяти это когда память не освобождается, нужно обнулять ссылки.
+Red flags: не знает конкретные причины утечек, не знает LeakCanary.
