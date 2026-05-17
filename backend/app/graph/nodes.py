@@ -149,19 +149,19 @@ async def question_generator(state: InterviewState) -> dict:
     n_questions = 3 if DEV_MODE else 5
     cv_summary = json.dumps(cv_data, ensure_ascii=False)[:600]
 
+    from app.services.rag_service import retrieve_context
+    rag_context = retrieve_context(query=f"{role} interview questions", role=role, top_k=3)
+    rag_block = f"\nПримеры вопросов и эталонных ответов из базы знаний:\n{rag_context}\n" if rag_context else ""
+
     prompt = f"""{personality}
 
 Сгенерируй ровно {n_questions} вопроса для роли: {role}.
 ВАЖНО: вопросы строго по специализации "{role}".
 
 CV кандидата: {cv_summary}
-
-Темы для роли {role}:
-- Если ML Engineer: ML алгоритмы, обучение моделей, метрики, фреймворки
-- Если Frontend Engineer: React/Vue, CSS, браузерные API, производительность
-- Если Backend Engineer: API, БД, архитектура сервисов, кэширование
-- Если Data Analyst: SQL, статистика, визуализация, A/B тесты
-- Если Product Manager: приоритизация, метрики, работа с командой
+{rag_block}
+Используй примеры выше как ориентир по сложности и тематике.
+Адаптируй вопросы под CV кандидата если видишь релевантный опыт.
 
 Верни ТОЛЬКО JSON массив без markdown, ровно {n_questions} элемента:
 ["вопрос 1", "вопрос 2", "вопрос 3"]"""
@@ -184,7 +184,6 @@ CV кандидата: {cv_summary}
         "follow_up_count": 0,
         "is_complete": False,
     }
-
 
 @traceable(name="answer_evaluator")
 async def answer_evaluator(state: InterviewState) -> dict:
