@@ -20,7 +20,7 @@
 | Этап 7.6 — Фича: Эталонный ответ | DONE | ideal_answer поле в evaluate_answer |
 | Этап 7.7 — Фича: Реакция на "не знаю" | DONE| Новая нода hint_node в LangGraph |
 | Этап 7.8 — Фича: Личность интервьюера | DONE | Выбор стиля в начале + system prompt |
-| Этап 8 — Evals и A/B тест | TODO | Golden dataset 30 примеров + run_evals.py |
+| Этап 8 — Evals и A/B тест | DONE | Golden dataset 30 примеров + run_evals.py |
 | Этап 9 — Документация и LLM обоснование | TODO | ARCHITECTURE.md, EVALS.md, презентация |
 | Этап 10 — Финальная проверка и демо | TODO | Дедлайн 20 мая |
 
