@@ -11,12 +11,19 @@ export default function ReportPage() {
   useEffect(() => {
     const r = sessionStorage.getItem("final_report");
     const s = sessionStorage.getItem("all_scores");
+    const total = sessionStorage.getItem("total_questions"); // добавь это
     if (!r) { router.push("/"); return; }
     try { setReport(JSON.parse(r)); } catch { setReport(r); }
-    setScores(s ? JSON.parse(s) : []);
+    
+    // берём только последние N scores где N = total_questions
+    if (s) {
+      const allScores = JSON.parse(s);
+      const totalQ = Number(total) || 3;
+      // берём последние totalQ уникальных оценок
+      setScores(allScores.slice(-totalQ));
+    }
     setRole(sessionStorage.getItem("role") || "");
   }, []);
-
   const avgScore = scores.length
     ? (scores.reduce((a, s) => a + (s.total_score || 0), 0) / scores.length).toFixed(1)
     : "—";
